@@ -27,3 +27,18 @@ except Exception as e:
 adc_photo = machine.ADC(machine.Pin(27))  # Photoresistor on GPIO 27 (Pin 32, ADC1)
 tilt = machine.Pin(12, machine.Pin.IN, machine.Pin.PULL_UP)  # Tilt switch on GPIO 12 (Pin 16)
 led = machine.Pin(13, machine.Pin.OUT)    # Red LED on GPIO 13 (Pin 17)
+
+# Function to connect to Wi-Fi with retries
+def connect_wifi():
+    """Connect to Wi-Fi with up to 20 seconds wait."""
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    print("Connecting to Wi-Fi...")
+    wlan.connect(SSID, PASSWORD)
+    for _ in range(20):  # Wait up to 20 seconds
+        if wlan.isconnected():
+            print("Connected! IP:", wlan.ifconfig()[0])
+            return wlan
+        time.sleep(1)
+    print("Failed to connect to Wi-Fi.")
+    return None
