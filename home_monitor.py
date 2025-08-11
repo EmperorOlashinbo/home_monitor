@@ -17,4 +17,13 @@ try:
     from config import SSID, PASSWORD, THINGSPEAK_API_KEY, THINGSPEAK_URL, DISCORD_WEBHOOK_URL, TEMP_THRESHOLD, HUMIDITY_THRESHOLD, LIGHT_THRESHOLD
 except ImportError:
     print("config.py not found, using defaults")
-    
+
+# Initialize sensors and LED
+try:
+    dht_sensor = dht.DHT11(machine.Pin(16))  # DHT11 on GPIO 16 (Pin 21)
+except Exception as e:
+    print("DHT11 initialization failed:", e)
+    dht_sensor = None
+adc_photo = machine.ADC(machine.Pin(27))  # Photoresistor on GPIO 27 (Pin 32, ADC1)
+tilt = machine.Pin(12, machine.Pin.IN, machine.Pin.PULL_UP)  # Tilt switch on GPIO 12 (Pin 16)
+led = machine.Pin(13, machine.Pin.OUT)    # Red LED on GPIO 13 (Pin 17)
