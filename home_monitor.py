@@ -42,3 +42,22 @@ def connect_wifi():
         time.sleep(1)
     print("Failed to connect to Wi-Fi.")
     return None
+
+# Sensor reading function
+def read_sensors():
+    """Read all sensor values with error handling and debounce."""
+    try:
+        dht_sensor.measure()
+        time.sleep(2)  # Settle time
+        dht_temp = dht_sensor.temperature()
+        dht_hum = dht_sensor.humidity()
+    except OSError:
+        print("Warning: DHT11 read failed")
+        dht_temp, dht_hum = None, None
+    light_value = adc_photo.read_u16()
+    light_level = (light_value / 65535) * 100
+    tilt_state = tilt.value()
+    time.sleep(0.1)  # Debounce
+    is_tilted = (tilt_state == 0)
+    led.value(is_tilted)
+    return dht_temp, dht_hum, light_level, is_tilted
