@@ -138,3 +138,78 @@ def start_web_server(wlan):
             response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + html
             cl.send(response.encode())
         cl.close()
+
+# Connect to Wi-Fi
+wlan = connect_wifi()
+
+if wlan is not None and wlan.isconnected():
+    # Start web server in a separate thread with wlan reference
+    import _thread
+    _thread.start_new_thread(start_web_server, (wlan,))
+else:
+    print("No Wi-Fi, web server not started")
+
+while True:
+    try:
+        # Read sensors
+        dht_temp, dht_hum, light_level, is_tilted = read_sensors()
+
+        # Print sensor readings
+        print(f"DHT11 Temp: {dht_temp}°C, "
+              f"Light: {light_level:.1f}%, Tilt: {'Tilted' if is_tilted else 'Not Tilted'}, "
+              f"Hum: {dht_hum}% ")
+
+        # Send data to ThingSpeak with retry if connected
+        if wlan is not None and wlan.isconnected():
+            payload = (f"api_key={THINGSPEAK_API_KEY}&field1={dht_temp if dht_temp is not None else 0}&"
+                       f"field2={dht_hum if dht_hum is not None else 0}&field3={light_level}&"
+                       f"field4={1 if is_tilted else 0}")
+            for attempt in range(3):  # Retry 3 times
+                try:
+                    response = urequests.get(THINGSPEAK_URL + "?" + payload, timeout=10)
+                    print("ThingSpeak response:", response.text)
+                    response.close()
+                    break
+                except Exception as e:
+                    print(f"ThingSpeak failed (Attempt {attempt + 1}/3): {e}")
+                    if attempt == 2:
+                        raise
+                    time.sleep(2)
+        else:
+            print("No Wi-Fi connection, skipping ThingSpeak update")
+
+        # Send Discord alert if thresholds are exceeded and Wi-Fi is available
+        if wlan is not None and wlan.isconnected() and (dht_temp > TEMP_THRESHOLD if dht_temp is not None else False or
+                                                       dht_hum > HUMIDITY_THRESHOLD if dht_hum is not None else False or
+                                                       light_level < LIGHT_THRESHOLD or is_tilted):
+            message = f"Alert! DHT11 Temp: {dht_temp if dht_temp is not None else 'N/A'}C, Hum: {dht_hum if dht_hum is not None else 'N/A'}%, Light: {light_level:.1f}%, Tilt: {'Tilted' if is_tilted else 'Not Tilted'}"
+            payload = ujson.dumps({"content": message})  # Use ujson for robust JSON
+            try:
+                response = urequests.post(DISCORD_WEBHOOK_URL, data=payload, headers={"Content-Type": "application/json"}, timeout=10)
+                response_text = response.text if response else "No response"
+                if response.status_code // 100 == 2:  # Success (200-299)
+                    print("Sent alert to Discord")
+                else:
+                    print(f"Discord alert failed: Status {response.status_code}, Response: {response_text}")
+                response.close()
+            except Exception as e:
+                print("Failed to send Discord alert:", e)
+
+        time.sleep(20)  # ThingSpeak free tier requires 15+ seconds between updates
+
+    except OSError as e:
+        print("Sensor/Network Error:", e)
+        for _ in range(3):  # Flash LED 3 times to indicate error
+            led.value(1)
+            time.sleep(0.5)
+            led.value(0)
+            time.sleep(0.5)
+        time.sleep(5)
+    except Exception as e:
+        print("Unexpected Error:", e)
+        for _ in range(3):  # Flash LED 3 times for unexpected errors
+            led.value(1)
+            time.sleep(0.5)
+            led.value(0)
+            time.sleep(0.5)
+        time.sleep(5)
