@@ -3,11 +3,11 @@ SSID = "Tenda_0"
 PASSWORD = "*****"
 
 # ThingSpeak
-THINGSPEAK_API_KEY = "HCN2Y67D5UXWB6KD"
+THINGSPEAK_API_KEY = "******"
 THINGSPEAK_URL = "http://api.thingspeak.com/update"
 
 # Discord Webhook
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1388876500471779338/g5EbIxK4DMS51WNuOj9oyLCkhpnhy1BPes6Cls923oky7GYrKklIT7YgUh0EOyjNZRdr"
+DISCORD_WEBHOOK_URL = "*****"
 
 # Thresholds
 TEMP_THRESHOLD = 30
